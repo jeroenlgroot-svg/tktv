@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TKTV — Recoupment Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#0f0e0c; --paper:#f5f2eb; --cream:#ede9df; --gold:#b89a4e;
+    --rust:#8b3a2a; --sage:#3d5a47; --dim:#7a7268; --rule:#ccc6b8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'DM Mono',monospace;min-height:100vh;padding:36px 20px 80px;}
+  header{text-align:center;margin-bottom:40px;}
+  header::before{content:'';display:block;height:2px;background:linear-gradient(to right,transparent,var(--gold),transparent);margin-bottom:22px;}
+  header::after {content:'';display:block;height:1px;background:linear-gradient(to right,transparent,var(--gold),transparent);margin-top:22px;}
+  .logo{font-family:'Playfair Display',serif;font-size:12px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;}
+  h1{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;}
+  .subtitle{font-size:10px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-top:6px;}
+  .peildatum{font-size:9px;color:var(--gold);letter-spacing:1px;margin-top:8px;}
+
+  .layout{max-width:960px;margin:0 auto;display:grid;grid-template-columns:275px 1fr;gap:24px;align-items:start;}
+  .panel{background:var(--cream);border:1px solid var(--rule);padding:22px;}
+  .panel.sticky{position:sticky;top:16px;}
+  .panel-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:16px;padding-bottom:9px;border-bottom:1px solid var(--rule);}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:5px;}
+  select,input[type=number]{width:100%;background:var(--paper);border:1px solid var(--rule);color:var(--ink);font-family:'DM Mono',monospace;font-size:13px;padding:9px 11px;outline:none;transition:border-color .2s;appearance:none;-webkit-appearance:none;}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23b89a4e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;cursor:pointer;}
+  select:focus,input:focus{border-color:var(--gold);}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:0;}
+  .hint{font-size:10px;color:var(--dim);margin-top:4px;line-height:1.5;}
+
+  .saldo-box{background:var(--ink);color:var(--paper);padding:10px 13px;margin-bottom:14px;}
+  .saldo-box .sb-label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:3px;}
+  .saldo-box .sb-val{font-size:15px;}
+
+  .divider{height:1px;background:var(--rule);margin:14px 0;}
+  .btn{width:100%;background:var(--ink);color:var(--gold);border:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;padding:12px;cursor:pointer;transition:background .2s;}
+  .btn:hover{background:var(--gold);color:var(--ink);}
+
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:260px;color:var(--dim);text-align:center;border:1px dashed var(--rule);}
+  .empty-icon{font-size:30px;margin-bottom:12px;opacity:.35;}
+  .empty p{font-size:10px;letter-spacing:2px;text-transform:uppercase;line-height:1.8;}
+
+  .r-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;}
+  .r-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:400;}
+  .r-sub{font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;}
+
+  .summary-strip{background:var(--ink);color:var(--paper);padding:13px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
+  .si label{color:var(--gold);font-size:8px;letter-spacing:2px;text-transform:uppercase;}
+  .si .val{font-size:13px;margin-top:3px;}
+  .si .val.neg{color:#f08080;}
+  .si .val.dim{color:#aaa;}
+
+  .positie{margin-bottom:18px;}
+  .pos-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--ink);padding-bottom:5px;margin-bottom:7px;}
+  .pos-naam{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--dim);}
+  .pos-meta{font-size:10px;color:var(--sage);}
+  .pos-skip{font-size:10px;color:var(--dim);padding:5px 0;font-style:italic;}
+
+  .ontvanger{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:7px 0;border-bottom:1px solid var(--cream);align-items:center;animation:fi .2s ease;}
+  @keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+  .o-naam{font-size:12px;}
+  .o-note{font-size:10px;color:var(--dim);text-align:right;max-width:160px;line-height:1.3;}
+  .o-bedrag{font-size:13px;font-weight:500;text-align:right;min-width:85px;}
+  .o-bedrag.pos{color:var(--sage);}
+  .o-bedrag.neg{color:var(--rust);}
+  .o-bedrag.nil{color:var(--dim);}
+
+  .totaal{margin-top:22px;border-top:2px solid var(--gold);padding-top:13px;}
+  .totaal-kop{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:9px;}
+  .t-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--cream);}
+  .t-row .naam{font-size:12px;}
+  .t-row .bedrag{font-size:13px;font-weight:500;color:var(--sage);}
+  .t-row.neg .bedrag{color:var(--rust);}
+  .t-row.grand{margin-top:8px;padding-top:8px;border-top:1px solid var(--rule);border-bottom:none;}
+  .t-row.grand .naam{font-family:'Playfair Display',serif;font-size:13px;}
+  .t-row.grand .bedrag{font-size:15px;color:var(--ink);}
+
+  .verificatie{margin-top:9px;padding:7px 11px;font-size:9px;letter-spacing:.4px;line-height:1.7;border-left:3px solid;}
+  .verificatie.ok {border-color:var(--sage);color:var(--sage);background:rgba(61,90,71,.07);}
+  .verificatie.warn{border-color:var(--gold);color:#7a5e18;background:rgba(184,154,78,.1);}
+  .verificatie.err {border-color:var(--rust);color:var(--rust);background:rgba(139,58,42,.07);}
+
+  .info{font-size:10px;color:var(--dim);margin-bottom:13px;padding:7px 11px;border-left:2px solid var(--rule);line-height:1.6;}
+  .badge{display:inline-block;background:var(--gold);color:var(--ink);font-size:8px;letter-spacing:1px;padding:2px 6px;text-transform:uppercase;}
+  .badge.neg{background:var(--rust);color:#fff;}
+
+  @media(max-width:680px){.layout{grid-template-columns:1fr;}.panel.sticky{position:static;}.summary-strip{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Topkapi TV</div>
+  <h1>Recoupment Calculator</h1>
+  <p class="subtitle">Statement verdelingsoverzicht</p>
+  <p class="peildatum">Peilstand: 31-12-2025 — gegenereerd op basis van TKTV_recoupmentschemas_totaal.xlsx</p>
+</header>
+
+<div class="layout">
+  <aside class="panel sticky">
+    <div class="panel-label">Statement invoer</div>
+
+    <div class="field">
+      <label>Productie</label>
+      <select id="sel-film" onchange="onFilmChange()">
+        <option value="">— kies productie —</option>
+        <option value="santos">Santos</option>
+        <option value="droom">De Droom van de Jeugd</option>
+        <option value="koningshuis">Koningshuis de Musical</option>
+        <option value="bodem">Bodem</option>
+        <option value="happy_ending">Happy Ending</option>
+      </select>
+    </div>
+
+    <div id="saldo-display" style="display:none"></div>
+
+    <!-- Standaard invoer (Santos, Happy Ending) -->
+    <div id="blok-std">
+      <div class="field">
+        <label>Nieuw bedrag statement (€)</label>
+        <input type="number" id="inp-bedrag" placeholder="0.00" step="0.01" oninput="resetResult()">
+        <p class="hint">Positief = inkomsten. Negatief = kosten / creditnota.</p>
+      </div>
+    </div>
+
+    <!-- NL / ROW invoer (Droom, Koningshuis, Bodem) -->
+    <div id="blok-nl-row" style="display:none">
+      <div class="field">
+        <label>Nieuwe NL-inkomsten (€)</label>
+        <input type="number" id="inp-nl" placeholder="0.00" step="0.01" oninput="resetResult()">
+      </div>
+      <div class="field">
+        <label>Nieuwe ROW-inkomsten (€)</label>
+        <input type="number" id="inp-row" placeholder="0.00" step="0.01" oninput="resetResult()">
+        <p class="hint">NL: omroep ontvangt niets extra. ROW: omroep deelt mee in opbrengst.</p>
+      </div>
+      <div class="field">
+        <label>Kosten op dit statement (€)</label>
+        <input type="number" id="inp-kst" placeholder="0.00" step="0.01" min="0" oninput="resetResult()">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn" onclick="calculate()">Bereken verdeling</button>
+  </aside>
+
+  <main>
+    <div id="empty" class="empty">
+      <div class="empty-icon">⊘</div>
+      <p>Kies een productie<br>en voer een bedrag in</p>
+    </div>
+    <div id="result" style="display:none"></div>
+  </main>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════
+// CUMULATIEVE SALDI UIT EXCEL (peilstand 31-12-2025)
+// Gegenereerd uit: TKTV_recoupmentschemas_totaal.xlsx
+// Bij nieuwe Excel: genereer nieuwe versie van dit bestand.
+// netto_cum = kolom D "over, te recoupen" = totaal netto in waterval
+// ═══════════════════════════════════════════════════════════════════
+const SALDI = {
+  santos:       { netto_cum: 41029.06 },
+  droom:        { nl_cum: 69573.96, row_cum: 0.0, kosten_cum: 1335.87, netto_cum: 68238.09 },
+  koningshuis:  { nl_cum: 3381.86,  row_cum: 0.0, kosten_cum: 315.00,  netto_cum: 3066.86  },
+  bodem:        { nl_cum: 39286.70, row_cum: 0.0, kosten_cum: 1033.20, netto_cum: 38253.50 },
+  happy_ending: { netto_cum: 528.03   },
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// WATERVAL SCHEMAS — conform kolom D logica in Excel
+// ═══════════════════════════════════════════════════════════════════
+
+const cap = (v, mx) => Math.min(Math.abs(v), mx) * Math.sign(v);
+
+// ─── SANTOS ──────────────────────────────────────────────────────
+// Pos 1: Topkapi TV 100%, cap investering €86.704
+// Pos 2: Topkapi TV 50%, BNNVARA 50%, cap €150.000 (€75k + €75k)
+// Pos 3: Topkapi TV 38,22%, BNNVARA 38,22%, NFF 23,56% (geen cap)
+function waterval_santos(netto) {
+  const P1_CAP = 86704;
+  const P2_CAP = 150000;
+  const P3_TKF = 0.3822076595236457;
+  const P3_BNN = 0.3822076595236457;
+  const P3_NFF = 0.2355846809527086;
+
+  const p1  = cap(netto, P1_CAP); const r1 = netto - p1;
+  const p2  = cap(r1, P2_CAP);    const r2 = r1 - p2;
+  const p3  = r2;
+
+  return {
+    posities: [
+      { naam: 'Eerste positie — Topkapi TV investering (cap €86.704)', pool: P1_CAP,
+        ontvangers: [{ naam: 'Topkapi TV', bedrag: p1, note: '100%' }] },
+      { naam: 'Tweede positie — Topkapi TV & BNNVARA (cap €150.000)', pool: P2_CAP,
+        ontvangers: [
+          { naam: 'Topkapi TV', bedrag: p2 * 0.5, note: '50%' },
+          { naam: 'BNNVARA',    bedrag: p2 * 0.5, note: '50%' }
+        ] },
+      { naam: 'Derde positie',
+        ontvangers: [
+          { naam: 'Topkapi TV',                              bedrag: p3 * P3_TKF, note: '38,22%' },
+          { naam: 'BNNVARA',                                 bedrag: p3 * P3_BNN, note: '38,22%' },
+          { naam: 'Stichting Nederlands Fonds voor de Film', bedrag: p3 * P3_NFF, note: '23,56%' }
+        ] }
+    ],
+    totalen_K: {
+      'Topkapi TV':                              p1 + p2*0.5 + p3*P3_TKF,
+      'BNNVARA':                                 p2*0.5 + p3*P3_BNN,
+      'Stichting Nederlands Fonds voor de Film': p3 * P3_NFF
+    }
+  };
+}
+
+// ─── DE DROOM VAN DE JEUGD ───────────────────────────────────────
+// Pos 1: Topkapi TV 100%, cap €42.648
+// Pos 2: Topkapi TV 50%, NFF 50% (KRO-NCRV investeert mee maar ontvangt niets)
+//   NFF betaalt 50% retour → Filmfonds (neg. in K)
+//   Van (Topkapi bruto + NFF retour) gaat 24% naar makers:
+//     Simone van Dusseldorp 3%, Bram Schouw 8%, Marnie Blok 3%, Auteurs 10%
+//   Topkapi netto = (Topkapi bruto + NFF retour) × 76%
+// waterval_droom(nl_tot, row_tot, kosten_tot)
+// NL: TKF 50%, NFF 50%, KRO-NCRV 0%
+// ROW: TKF 33.30%, KRO-NCRV 33.30%, NFF 33.41%
+// NFF betaalt 50% retour; makers (24%) komen van (TKF bruto + NFF retour)
+function waterval_droom(nl_tot, row_tot, kosten_tot) {
+  const P1_CAP  = 42648;
+  const NFF_RET = 0.50;
+  const M_SIM=0.03, M_BRAM=0.08, M_MAR=0.03, M_AUT=0.10;
+  const P_TKF=0.33296418109819703, P_KRO=0.33296418109819703, P_NFF=0.334071637803606;
+
+  const netto = nl_tot + row_tot - kosten_tot;
+
+  // Pos 1: TKF investering terug (cap)
+  const p1 = cap(netto, P1_CAP); const r1 = netto - p1;
+
+  // Pos 2: verdeel r1 in NL-deel en ROW-deel
+  // NL netto boven pos1: max(0, min(nl_tot - kosten_tot, netto) - p1) -- simpeler:
+  // We weten hoeveel van r1 uit NL komt en hoeveel uit ROW
+  // NL bijdrage aan pos2 = max(0, (nl_tot - kosten_tot) - p1)  [kosten eerst van NL]
+  const nl_netto = Math.max(0, nl_tot - kosten_tot);
+  const nl_in_p1 = Math.min(nl_netto, p1);   // deel van pos1 dat uit NL komt
+  const nl_in_p2 = Math.max(0, nl_netto - nl_in_p1);
+  const row_in_p2 = Math.max(0, r1 - nl_in_p2);
+
+  // NL deel pos2: TKF 50%, NFF 50%, KRO 0
+  const nl2_tkf = nl_in_p2 * 0.5;
+  const nl2_nff = nl_in_p2 * 0.5;
+  const nl2_kro = 0;
+
+  // ROW deel pos2: TKF P_TKF, KRO P_KRO, NFF P_NFF
+  const row2_tkf = row_in_p2 * P_TKF;
+  const row2_kro = row_in_p2 * P_KRO;
+  const row2_nff = row_in_p2 * P_NFF;
+
+  const tkf_bruto = nl2_tkf + row2_tkf;
+  const kro       = nl2_kro + row2_kro;
+  const nff_bruto = nl2_nff + row2_nff;
+  const nff_ret   = nff_bruto * NFF_RET;
+  const nff_netto = nff_bruto - nff_ret;
+
+  const makers_basis = tkf_bruto + nff_ret;
+  const sim  = makers_basis * M_SIM;
+  const bram = makers_basis * M_BRAM;
+  const mar  = makers_basis * M_MAR;
+  const aut  = makers_basis * M_AUT;
+  const tkf_netto = makers_basis - sim - bram - mar - aut;
+
+  const pos2_ontvangers = [
+    { naam: 'Topkapi TV',                              bedrag: tkf_netto, note: 'NL 50% / ROW 33,30% − makers' },
+    { naam: 'Stichting Nederlands Fonds voor de Film', bedrag: nff_bruto, note: 'NL 50% / ROW 33,41% (bruto)' },
+    { naam: 'Filmfonds (retour)',                       bedrag: -nff_ret,  note: '−50% NFF retour' },
+    { naam: 'Simone van Dusseldorp',                   bedrag: sim,       note: '3% van TKF+NFF retour' },
+    { naam: 'Bram Schouw',                             bedrag: bram,      note: '8% van TKF+NFF retour' },
+    { naam: 'Marnie Blok',                             bedrag: mar,       note: '3% van TKF+NFF retour' },
+    { naam: 'Auteurs gezamenlijk',                     bedrag: aut,       note: '10% van TKF+NFF retour' }
+  ];
+  if (Math.abs(kro) >= 0.005)
+    pos2_ontvangers.splice(1, 0, { naam: 'KRO-NCRV', bedrag: kro, note: 'ROW 33,30%' });
+
+  return {
+    posities: [
+      { naam: 'Eerste positie — Topkapi TV investering (cap €42.648)', pool: P1_CAP,
+        ontvangers: [{ naam: 'Topkapi TV', bedrag: p1, note: '100%' }] },
+      { naam: 'Tweede positie', ontvangers: pos2_ontvangers }
+    ],
+    totalen_K: {
+      'Topkapi TV':                              p1 + tkf_netto,
+      'KRO-NCRV':                                kro,
+      'Stichting Nederlands Fonds voor de Film': nff_bruto,
+      'Filmfonds (retour)':                      -nff_ret,
+      'Simone van Dusseldorp':                   sim,
+      'Bram Schouw':                             bram,
+      'Marnie Blok':                             mar,
+      'Auteurs gezamenlijk':                     aut
+    }
+  };
+}
+
+// ─── KONINGSHUIS DE MUSICAL ───────────────────────────────────────
+// Pos 1: Topkapi TV 100%, cap investering €1.551,31
+// Pos 2: Topkapi TV 50%, Avrotros 50%
+//   Avrotros ontvangt niets — 100% van Avrotros-deel naar Diederik Ebbinge:
+//     regie 25% + scenario 25% = 50% van pos2 totaal
+//   Topkapi TV netto pos2 = 50% van pos2
+// waterval_koningshuis(nl_tot, row_tot, kosten_tot)
+// NL: TKF 100% van pos2, Avrotros 0%, Ebbinge = 50% van pos2 (Avrotros aandeel)
+// ROW: TKF 50%, Avrotros 50%; van TKF's deel: Ebbinge 50% (regie+scenario)
+function waterval_koningshuis(nl_tot, row_tot, kosten_tot) {
+  const P1_CAP = 1551.31;
+
+  const netto = nl_tot + row_tot - kosten_tot;
+  const p1 = cap(netto, P1_CAP); const r1 = netto - p1;
+
+  // Verdeel r1 in NL-deel en ROW-deel boven pos1
+  const nl_netto  = Math.max(0, nl_tot - kosten_tot);
+  const nl_in_p1  = Math.min(nl_netto, p1);
+  const nl_in_p2  = Math.max(0, nl_netto - nl_in_p1);
+  const row_in_p2 = Math.max(0, r1 - nl_in_p2);
+
+  // NL pos2: TKF 100%, Avrotros 0%; Ebbinge = 50% van pos2_NL (Avrotros aandeel)
+  const nl2_tkf_bruto = nl_in_p2;
+  const nl2_ebbinge   = nl_in_p2 * 0.5;   // Avrotros aandeel → Ebbinge
+  const nl2_tkf_netto = nl2_tkf_bruto - nl2_ebbinge;
+  const nl2_avrotros  = 0;
+
+  // ROW pos2: TKF 50%, Avrotros 50%; van TKF: Ebbinge 50%
+  const row2_tkf_bruto = row_in_p2 * 0.5;
+  const row2_avrotros  = row_in_p2 * 0.5;
+  const row2_ebbinge   = row2_tkf_bruto * 0.5;   // 25%+25% van TKF
+  const row2_tkf_netto = row2_tkf_bruto - row2_ebbinge;
+
+  const tkf_netto = nl2_tkf_netto + row2_tkf_netto;
+  const avrotros  = nl2_avrotros  + row2_avrotros;
+  const ebbinge   = nl2_ebbinge   + row2_ebbinge;
+
+  const pos2_ontvangers = [
+    { naam: 'Topkapi TV',       bedrag: tkf_netto, note: 'NL 50% netto / ROW 25% netto' },
+    { naam: 'Diederik Ebbinge', bedrag: ebbinge,   note: 'NL 50% (Avrotros) / ROW 25% (TKF-deel)' }
+  ];
+  if (Math.abs(avrotros) >= 0.005)
+    pos2_ontvangers.push({ naam: 'Avrotros', bedrag: avrotros, note: 'ROW 50%' });
+
+  return {
+    posities: [
+      { naam: 'Eerste positie — Topkapi TV investering (cap €1.551)', pool: P1_CAP,
+        ontvangers: [{ naam: 'Topkapi TV', bedrag: p1, note: '100%' }] },
+      { naam: 'Tweede positie — Topkapi TV & Avrotros', ontvangers: pos2_ontvangers }
+    ],
+    totalen_K: {
+      'Topkapi TV':       p1 + tkf_netto,
+      'Diederik Ebbinge': ebbinge,
+      'Avrotros':         avrotros
+    }
+  };
+}
+
+// ─── BODEM ────────────────────────────────────────────────────────
+// Pos 1 (enige positie): Topkapi TV 50%, BNNVARA 50%
+//   BNNVARA ontvangt niets — 100% van BNNVARA-deel naar Eva Crutzen:
+//     regie 25% + scenario 25% = 50% van pos1 totaal
+//   Topkapi TV netto = 50% van netto
+// waterval_bodem(nl_tot, row_tot, kosten_tot)
+// NL: TKF 50%, BNNVARA 0%; Eva = 50% van netto (= BNNVARA aandeel)
+// ROW: TKF 50%, BNNVARA 50%; van TKF's deel: Eva 50% (regie+scenario)
+function waterval_bodem(nl_tot, row_tot, kosten_tot) {
+  const nl_netto  = Math.max(0, nl_tot - kosten_tot);
+  const row_netto = row_tot;
+
+  // NL: TKF=50%, Eva=50% (BNNVARA aandeel), BNNVARA=0
+  const nl_tkf = nl_netto * 0.5;
+  const nl_eva = nl_netto * 0.5;
+
+  // ROW: TKF 50%, BNNVARA 50%; van TKF: Eva 50%
+  const row_tkf_bruto = row_netto * 0.5;
+  const row_bnnvara   = row_netto * 0.5;
+  const row_eva       = row_tkf_bruto * 0.5;   // 25%+25% van TKF-deel
+  const row_tkf_netto = row_tkf_bruto - row_eva;
+
+  const tkf    = nl_tkf + row_tkf_netto;
+  const eva    = nl_eva + row_eva;
+  const bnnvara = row_bnnvara;
+
+  const ontvangers = [
+    { naam: 'Topkapi TV',  bedrag: tkf, note: 'NL 50% / ROW 25% netto' },
+    { naam: 'Eva Crutzen', bedrag: eva, note: 'NL 50% (BNNVARA) / ROW 25% (TKF-deel)' }
+  ];
+  if (Math.abs(bnnvara) >= 0.005)
+    ontvangers.push({ naam: 'BNNVARA', bedrag: bnnvara, note: 'ROW 50%' });
+
+  return {
+    posities: [{ naam: 'Eerste positie — Topkapi TV & BNNVARA', ontvangers }],
+    totalen_K: { 'Topkapi TV': tkf, 'Eva Crutzen': eva, 'BNNVARA': bnnvara }
+  };
+}
+
+// ─── HAPPY ENDING ─────────────────────────────────────────────────
+// Pos 1 (enige positie): Topkapi TV 100%
+//   Hiervan: Joosje Duk 33,33% (regie), Gaite Jansen 33,33% (acteur)
+//   Topkapi netto = 33,33%
+function waterval_happy_ending(netto) {
+  const joosje = netto / 3;
+  const gaite  = netto / 3;
+  const tkf    = netto - joosje - gaite;
+
+  return {
+    posities: [
+      { naam: 'Eerste positie — Topkapi TV',
+        ontvangers: [
+          { naam: 'Topkapi TV',    bedrag: tkf,    note: '33,33% netto' },
+          { naam: 'Joosje Duk',    bedrag: joosje, note: '33,33% (regie)' },
+          { naam: 'Gaite Jansen',  bedrag: gaite,  note: '33,33% (acteur)' }
+        ] }
+    ],
+    totalen_K: {
+      'Topkapi TV':   tkf,
+      'Joosje Duk':   joosje,
+      'Gaite Jansen': gaite
+    }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DELTA BEREKENING
+// ═══════════════════════════════════════════════════════════════════
+function delta_K(K_oud, K_nieuw) {
+  const alle = new Set([...Object.keys(K_oud), ...Object.keys(K_nieuw)]);
+  const d = {};
+  for (const naam of alle) {
+    const diff = (K_nieuw[naam]||0) - (K_oud[naam]||0);
+    if (Math.abs(diff) >= 0.005) d[naam] = diff;
+  }
+  return d;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════════
+const fmt = n => {
+  if (Math.abs(n) < 0.005) return '—';
+  return (n<0?'−':'') + '€\u202f' + Math.abs(n).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});
+};
+const cls = n => Math.abs(n)<0.005 ? 'nil' : n<0 ? 'neg' : 'pos';
+
+function resetResult() {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('empty').style.display  = 'flex';
+}
+
+const NL_ROW_FILMS = new Set(['droom', 'koningshuis', 'bodem']);
+
+function onFilmChange() {
+  const f = document.getElementById('sel-film').value;
+  document.getElementById('saldo-display').style.display = f ? '' : 'none';
+  document.getElementById('blok-nl-row').style.display = NL_ROW_FILMS.has(f) ? '' : 'none';
+  document.getElementById('blok-std').style.display    = NL_ROW_FILMS.has(f) ? 'none' : '';
+
+  if (f && SALDI[f]) {
+    const s = SALDI[f];
+    if (NL_ROW_FILMS.has(f)) {
+      document.getElementById('saldo-display').innerHTML = `
+        <div class="saldo-box">
+          <div class="sb-label">Huidig saldo in schema</div>
+          <div style="font-size:10px;margin-top:4px;color:#aaa">NL: ${fmt(s.nl_cum)} &nbsp;|&nbsp; ROW: ${fmt(s.row_cum)}</div>
+          <div style="font-size:10px;color:#aaa">Kosten: ${fmt(s.kosten_cum)} &nbsp;|&nbsp; Netto: ${fmt(s.netto_cum)}</div>
+        </div>`;
+    } else {
+      document.getElementById('saldo-display').innerHTML = `
+        <div class="saldo-box">
+          <div class="sb-label">Huidig netto in schema</div>
+          <div class="sb-val">${fmt(s.netto_cum)}</div>
+        </div>`;
+    }
+  }
+  resetResult();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CALCULATE
+// ═══════════════════════════════════════════════════════════════════
+function calculate() {
+  const f = document.getElementById('sel-film').value;
+  if (!f) { alert('Kies eerst een productie.'); return; }
+
+  const LABELS = {
+    santos:'Santos', droom:'De Droom van de Jeugd',
+    koningshuis:'Koningshuis de Musical', bodem:'Bodem', happy_ending:'Happy Ending'
+  };
+  const WV_STD = {
+    santos: waterval_santos,
+    happy_ending: waterval_happy_ending
+  };
+  const WV_NL_ROW = {
+    droom: waterval_droom,
+    koningshuis: waterval_koningshuis,
+    bodem: waterval_bodem
+  };
+
+  const s = SALDI[f];
+
+  if (NL_ROW_FILMS.has(f)) {
+    const nl_new  = parseFloat(document.getElementById('inp-nl').value)  || 0;
+    const row_new = parseFloat(document.getElementById('inp-row').value) || 0;
+    const kst_new = parseFloat(document.getElementById('inp-kst').value) || 0;
+    if (nl_new === 0 && row_new === 0) { alert('Voer NL- en/of ROW-inkomsten in.'); return; }
+
+    const nl_tot  = s.nl_cum  + nl_new;
+    const row_tot = s.row_cum + row_new;
+    const kst_tot = s.kosten_cum + kst_new;
+    const netto_oud   = s.netto_cum;
+    const netto_nieuw = nl_tot + row_tot - kst_tot;
+    const delta = netto_nieuw - netto_oud;
+
+    const oud  = WV_NL_ROW[f](s.nl_cum,  s.row_cum,  s.kosten_cum);
+    const nieuw = WV_NL_ROW[f](nl_tot,    row_tot,    kst_tot);
+
+    render(LABELS[f], f, oud, nieuw, delta, netto_oud, netto_nieuw,
+      { nl: nl_new, row: row_new, kst: kst_new });
+  } else {
+    const bedrag = parseFloat(document.getElementById('inp-bedrag').value);
+    if (isNaN(bedrag) || bedrag === 0) { alert('Voer een geldig bedrag in (≠ 0).'); return; }
+
+    const netto_oud   = s.netto_cum;
+    const netto_nieuw = netto_oud + bedrag;
+
+    const oud  = WV_STD[f](netto_oud);
+    const nieuw = WV_STD[f](netto_nieuw);
+
+    render(LABELS[f], f, oud, nieuw, bedrag, netto_oud, netto_nieuw, null);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+function render(label, filmKey, oud, nieuw, delta_netto, netto_oud, netto_nieuw) {
+  const area = document.getElementById('result');
+  document.getElementById('empty').style.display = 'none';
+  area.style.display = 'block';
+
+  const isNeg   = delta_netto < 0;
+  const nlRowExtra = arguments[7] || null;
+  const dK      = delta_K(oud.totalen_K, nieuw.totalen_K);
+  const somDelta = Object.values(dK).reduce((s,v) => s+v, 0);
+
+  const diff   = Math.abs(somDelta - delta_netto);
+  const vClass = diff < 0.02 ? 'ok' : diff < 1 ? 'warn' : 'err';
+  const vTekst = diff < 0.02
+    ? `✓ Verificatie — delta K (${fmt(somDelta)}) = statement (${fmt(delta_netto)})`
+    : `⚠ Verschil ${fmt(diff)} — delta K ${fmt(somDelta)} vs statement ${fmt(delta_netto)}`;
+
+  let html = `
+    <div class="r-header">
+      <div><div class="r-title">${label}</div><div class="r-sub">Verdeling nieuw statement</div></div>
+      <span class="badge ${isNeg?'neg':''}">${isNeg?'kosten / correctie':'inkomsten'}</span>
+    </div>`;
+
+  if (nlRowExtra) {
+    html += `<div class="summary-strip">
+      <div class="si"><label>NL (nieuw)</label><div class="val">${fmt(nlRowExtra.nl)}</div></div>
+      <div class="si"><label>ROW (nieuw)</label><div class="val">${fmt(nlRowExtra.row)}</div></div>
+      <div class="si"><label>Delta netto</label><div class="val ${isNeg?'neg':''}">${fmt(delta_netto)}</div></div>
+    </div>`;
+  } else {
+    html += `<div class="summary-strip">
+      <div class="si"><label>Statement</label><div class="val ${isNeg?'neg':''}">${fmt(delta_netto)}</div></div>
+      <div class="si"><label>Stand vóór</label><div class="val dim">${fmt(netto_oud)}</div></div>
+      <div class="si"><label>Stand na</label><div class="val">${fmt(netto_nieuw)}</div></div>
+    </div>`;
+  }
+  html += '';
+
+  // Posities
+  for (let i = 0; i < nieuw.posities.length; i++) {
+    const pN = nieuw.posities[i];
+    const pO = oud.posities[i] || { ontvangers: [] };
+
+    const delta_ontvangers = (pN.ontvangers||[]).map(oN => {
+      const oO  = (pO.ontvangers||[]).find(x => x.naam === oN.naam);
+      const delta = (oN.bedrag||0) - (oO ? oO.bedrag||0 : 0);
+      return { naam: oN.naam, note: oN.note, delta };
+    });
+
+    const heeftDelta = delta_ontvangers.some(o => Math.abs(o.delta) >= 0.005);
+    const poolStr    = pN.pool !== undefined
+      ? `<span class="pos-meta">pool: €\u202f${pN.pool.toLocaleString('nl-NL',{maximumFractionDigits:0})}</span>`
+      : '';
+
+    html += `<div class="positie">
+      <div class="pos-header"><span class="pos-naam">${pN.naam}</span>${poolStr}</div>`;
+
+    if (!heeftDelta) {
+      html += `<div class="pos-skip">Geen nieuw bedrag in deze positie</div>`;
+    } else {
+      for (const o of delta_ontvangers) {
+        if (Math.abs(o.delta) < 0.005) continue;
+        html += `<div class="ontvanger">
+          <span class="o-naam">${o.naam}</span>
+          <span class="o-note">${o.note||''}</span>
+          <span class="o-bedrag ${cls(o.delta)}">${fmt(o.delta)}</span>
+        </div>`;
+      }
+    }
+    html += `</div>`;
+  }
+
+  // Totaaltabel
+  const sortedD = Object.entries(dK).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+  html += `<div class="totaal"><div class="totaal-kop">Uitbetaling dit statement (delta kolom K)</div>`;
+  for (const [naam, v] of sortedD) {
+    html += `<div class="t-row ${v<0?'neg':''}"><span class="naam">${naam}</span><span class="bedrag">${fmt(v)}</span></div>`;
+  }
+  html += `<div class="t-row grand"><span class="naam">Totaal</span><span class="bedrag">${fmt(somDelta)}</span></div>`;
+  html += `<div class="verificatie ${vClass}">${vTekst}</div>`;
+  html += `</div>`;
+
+  area.innerHTML = html;
+}
+</script>
+</body>
+</html>
